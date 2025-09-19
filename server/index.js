@@ -16,14 +16,15 @@
   RATE_LIMIT_MAX=100
 */
 
-const path = require("path");
-const express = require("express");
-const dotenv = require("dotenv");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const rateLimit = require("express-rate-limit");
-const compression = require("compression");
+import path from "path";
+import express from "express";
+import dotenv from "dotenv";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import rateLimit from "express-rate-limit";
+import compression from "compression";
+import cookieParser from "cookie-parser";
 
 // Load env from project root .env by default
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
@@ -45,6 +46,7 @@ app.use(helmet()); // security headers
 app.use(compression()); // gzip responses
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
 
 if (!isProd) {
   app.use(morgan("dev"));
@@ -155,4 +157,4 @@ function shutdown(signal) {
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
-module.exports = app;
+export default app;
