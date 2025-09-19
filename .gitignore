@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+
+# Ignore server node_modules specifically (in case monorepo)
+server/node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
