@@ -1,158 +1,169 @@
-/*
-  Robust Express server for chat-app
-  - Uses dotenv for configuration
-  - Applies security (helmet), CORS, rate-limiting, compression
-  - Logs via morgan in non-production
-  - Graceful shutdown and centralized error handling
+import dotenv from "dotenv";
+import path from "path";
+import fs from "fs";
+import express from "express";
+import helmet from "helmet";
+import compression from "compression";
+import cookieParser from "cookie-parser";
+import morgan from "morgan";
+import rateLimit from "express-rate-limit";
+import cors from "cors";
+import mongoose from "mongoose";
 
-  Recommended dependencies:
-  npm install express dotenv cors helmet morgan express-rate-limit compression
-
-  Env variables (recommended in .env):
-  PORT=4000
-  NODE_ENV=development
-  CORS_ORIGINS=http://localhost:5173
-  RATE_LIMIT_WINDOW_MS=60000
-  RATE_LIMIT_MAX=100
-*/
-
-const path = require("path");
-const express = require("express");
-const dotenv = require("dotenv");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const rateLimit = require("express-rate-limit");
-const compression = require("compression");
-
-// Load env from project root .env by default
+// Load environment variables
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
-const isProd = process.env.NODE_ENV === "production";
-const PORT = parseInt(process.env.PORT, 10) || 4000;
+// Build Mongo URI dynamically
+function buildMongoUri() {
+  const { DB_USER, DB_PASS, DB_HOST, DB_PORT, DB_NAME, DB_AUTH_DB } =
+    process.env;
 
-// CORS origins: allow comma-separated list in CORS_ORIGINS env var
-const rawOrigins = process.env.CORS_ORIGINS || "";
-const allowedOrigins = rawOrigins
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+  if (DB_USER && DB_PASS) {
+    return `mongodb://${encodeURIComponent(DB_USER)}:${encodeURIComponent(
+      DB_PASS
+    )}@${DB_HOST}:${DB_PORT}/${DB_NAME}?authSource=${DB_AUTH_DB || "admin"}`;
+  }
 
-const app = express();
-
-// Basic middlewares
-app.use(helmet()); // security headers
-app.use(compression()); // gzip responses
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: false }));
-
-if (!isProd) {
-  app.use(morgan("dev"));
-} else {
-  app.use(morgan("combined"));
+  return `mongodb://${DB_HOST}:${DB_PORT}/${DB_NAME}`;
 }
 
-// Configure CORS: allow list or fallback to same origin
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow non-browser tools (no origin) or if origin matches list
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.length === 0) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      return callback(null, true);
-    }
-    callback(new Error("Not allowed by CORS"));
-  },
-  optionsSuccessStatus: 200,
-};
+// Connect to MongoDB
+async function connectDB() {
+  const uri = buildMongoUri();
+  const options = {
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 30000,
+    maxPoolSize: 50,
+    minPoolSize: 5,
+    retryWrites: true,
+    retryReads: true,
+    maxIdleTimeMS: 60000,
+  };
 
-app.use(cors(corsOptions));
+  try {
+    console.log("🔗 Connecting MongoDB:", uri);
+    await mongoose.connect(uri, options);
+    console.log("✅ MongoDB connected successfully");
+  } catch (error) {
+    console.error("❌ MongoDB connection error:", error);
+    process.exit(1);
+  }
+}
 
-// Rate limiter: tune via environment
-const windowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 60_000; // 1 minute
-const maxReq = parseInt(process.env.RATE_LIMIT_MAX, 10) || 100;
+const isProd = process.env.NODE_ENV === "production";
+const PORT = parseInt(process.env.PORT, 10) || 3000;
+const app = express();
+
+// Middlewares
+app.use(helmet());
+app.use(compression());
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(morgan(isProd ? "combined" : "dev"));
+
+// CORS setup
+app.use(
+  cors({
+    origin: [process.env.ORIGIN || ""],
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    exposedHeaders: ["Location"],
+    credentials: true,
+    optionsSuccessStatus: 204,
+    preflightContinue: false,
+  })
+);
+
+// Rate limiter
 const limiter = rateLimit({
-  windowMs,
-  max: maxReq,
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 60000,
+  max: parseInt(process.env.RATE_LIMIT_MAX, 10) || 100,
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use(limiter);
 
-// Simple health / metrics endpoints
-app.get("/health", (req, res) =>
-  res.json({ status: "ok", env: process.env.NODE_ENV || "development" })
-);
+// Health check
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok", env: process.env.NODE_ENV || "development" });
+});
 
-// Example API namespace
+// API namespace
 const api = express.Router();
 
 api.get("/ping", (_req, res) => {
   res.json({ pong: true, ts: Date.now() });
 });
 
-// Auth stub (replace with real auth)
 api.post("/auth/signup", (req, res) => {
   const { email } = req.body || {};
-  if (!email) return res.status(400).json({ error: "email-required" });
-  // ... create user logic
-  res.status(201).json({ id: "user_stub", email });
+  if (!email) return res.status(400).json({ error: "email_required" });
+  return res.status(201).json({ id: "user_stub", email });
 });
 
-api.post("/auth/login", (req, res) => {
-  // ... login logic
-  res.json({ token: "stub-token" });
+api.post("/auth/login", (_req, res) => {
+  return res.json({ token: "stub-token" });
 });
 
 app.use("/api", api);
 
-// Static file fallback (optional) - serve frontend if built into ../dist
+// Static frontend
 const clientDist = path.resolve(process.cwd(), "dist");
-app.use(express.static(clientDist));
-app.get("*", (req, res, next) => {
-  // If the file exists in dist, express.static already served it; otherwise send index.html
-  const indexFile = path.join(clientDist, "index.html");
-  res.sendFile(indexFile, function (err) {
-    if (err) next();
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  app.get("/*", (req, res, next) => {
+    const indexFile = path.join(clientDist, "index.html");
+    if (!fs.existsSync(indexFile)) return next();
+    res.sendFile(indexFile, (err) => {
+      if (err) next(err);
+    });
   });
-});
+}
 
 // Centralized error handler
-app.use((err, _req, res, _next) => {
+app.use((err, req, res, _next) => {
   console.error("Unhandled error:", err && err.stack ? err.stack : err);
-  const status = err && err.status ? err.status : 500;
   res
-    .status(status)
-    .json({ error: err && err.message ? err.message : "internal_error" });
+    .status(err?.status || 500)
+    .json({ error: err?.message || "internal_error" });
 });
 
-// Start server with graceful shutdown
-const server = app.listen(PORT, () => {
+// Start server
+const server = app.listen(PORT, async () => {
   console.log(
-    `Server listening on port ${PORT} (env=${
+    `🚀 Server listening on port ${PORT} (env=${
       process.env.NODE_ENV || "development"
     })`
   );
+  await connectDB();
 });
 
+// Graceful shutdown
 function shutdown(signal) {
-  console.log(`Received ${signal}. Closing server...`);
+  console.log(`\nReceived ${signal}. Closing server...`);
   server.close((err) => {
     if (err) {
-      console.error("Error during server close", err);
+      console.error("Error during server close:", err);
       process.exit(1);
     }
-    console.log("Server closed. Exiting process.");
-    process.exit(0);
+    mongoose
+      .disconnect()
+      .catch((e) => console.warn("Error during mongoose disconnect:", e))
+      .finally(() => {
+        console.log("Shutdown complete");
+        process.exit(0);
+      });
   });
-  // Force exit after timeout
+
   setTimeout(() => {
     console.warn("Forcing shutdown");
     process.exit(1);
-  }, 10_000).unref();
+  }, 10000).unref();
 }
 
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
-module.exports = app;
+export default app;
