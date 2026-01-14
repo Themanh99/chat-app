@@ -1,6 +1,10 @@
-function buildMongoUri() {
-  const { DB_USER, DB_PASS, DB_HOST, DB_PORT, DB_NAME, DB_AUTH_DB } =
-    process.env;
+
+import mongoose, { ConnectOptions } from "mongoose";
+import { env } from "../config/env.js";
+
+// Build Mongo URI dynamically
+export function buildMongoUri(): string {
+  const { DB_USER, DB_PASS, DB_HOST, DB_PORT, DB_NAME, DB_AUTH_DB } = env;
 
   if (DB_USER && DB_PASS) {
     return `mongodb://${encodeURIComponent(DB_USER)}:${encodeURIComponent(
@@ -11,9 +15,10 @@ function buildMongoUri() {
   return `mongodb://${DB_HOST}:${DB_PORT}/${DB_NAME}`;
 }
 
-async function connectDB() {
+// Connect to MongoDB
+export async function connectDB(): Promise<void> {
   const uri = buildMongoUri();
-  const options = {
+  const options: ConnectOptions = {
     serverSelectionTimeoutMS: 30000,
     socketTimeoutMS: 45000,
     connectTimeoutMS: 30000,
@@ -33,5 +38,3 @@ async function connectDB() {
     process.exit(1);
   }
 }
-
-export { buildMongoUri, connectDB };
