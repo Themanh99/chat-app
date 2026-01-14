@@ -1,17 +1,44 @@
+
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import Chat from "./pages/chat";
 import Auth from "./pages/auth";
-import Homepage from "./pages/homepage";
+import Chat from "./pages/chat";
 import Profile from "./pages/profile";
+import AuthGuard, { PublicRoute } from "./components/layout/AuthGuard";
 
 const App = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Homepage />} />
-        <Route path="/chat" element={<Chat />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/profile" element={<Profile />} />
+        {/* Public Routes (Accessible only if NOT logged in) */}
+        <Route
+          path="/auth"
+          element={
+            <PublicRoute>
+              <Auth />
+            </PublicRoute>
+          }
+        />
+
+        {/* Private Routes (Protected) */}
+        <Route
+          path="/chat"
+          element={
+            <AuthGuard>
+              <Chat />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <AuthGuard>
+              <Profile />
+            </AuthGuard>
+          }
+        />
+
+        {/* Redirects */}
+        <Route path="/" element={<Navigate to="/auth" />} />
         <Route path="*" element={<Navigate to="/auth" />} />
       </Routes>
     </BrowserRouter>
