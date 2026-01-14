@@ -20,3 +20,4 @@ client/.env.*
 Thumbs.db
 *.log
 *.swp
+package-lock.json

@@ -16,7 +16,8 @@ interface JwtPayload {
 }
 
 export const verifyToken = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  const token = req.cookies.jwt;
+  // Use "accessToken" cookie now
+  const token = req.cookies.accessToken;
 
   if (!token) {
     return next(new AppError("You are not authenticated", HttpCodes.UNAUTHORIZED, ErrorCodes.AUTHENTICATION_ERROR));
@@ -24,7 +25,8 @@ export const verifyToken = (req: AuthenticatedRequest, res: Response, next: Next
 
   jwt.verify(token, env.JWT_KEY, (err: any, decoded: any) => {
     if (err) {
-       return next(new AppError("Token is not valid", HttpCodes.UNAUTHORIZED, ErrorCodes.AUTHENTICATION_ERROR));
+       // Frontend handles 401/403 -> Tries /refresh
+       return next(new AppError("Token is not valid", HttpCodes.FORBIDDEN, ErrorCodes.AUTHENTICATION_ERROR));
     }
     
     req.userId = (decoded as JwtPayload).userId;
