@@ -1,9 +1,34 @@
 
-import { Settings, Plus, Hash } from "lucide-react";
-import { Avatar, Button, Tooltip } from "antd";
+import { Settings, Plus, Hash, LogOut } from "lucide-react";
+import { Avatar, Button, Tooltip, Dropdown } from "antd";
+import type { MenuProps } from "antd";
 import { MOCK_CHANNELS, MOCK_DMS } from "../../lib/mock-data";
+import { useAuth } from "../../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
-const Sidebar = () => {
+interface SidebarProps {
+    onChatSelect?: () => void;
+}
+
+const Sidebar = ({ onChatSelect }: SidebarProps) => {
+    const { logout, userInfo } = useAuth();
+    const navigate = useNavigate();
+
+    const menuItems: MenuProps['items'] = [
+        {
+            key: 'profile',
+            label: 'Profile',
+            onClick: () => navigate('/profile'),
+        },
+        {
+            key: 'logout',
+            label: 'Logout',
+            icon: <LogOut size={16} />,
+            danger: true,
+            onClick: logout,
+        },
+    ];
+
     return (
         <div className="w-full md:w-[280px] lg:w-[320px] h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300">
             {/* Header */}
@@ -27,7 +52,11 @@ const Sidebar = () => {
                     </div>
                     <div className="space-y-1">
                         {MOCK_CHANNELS.map(channel => (
-                            <div key={channel.id} className="group flex items-center px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
+                            <div 
+                                key={channel.id} 
+                                onClick={onChatSelect}
+                                className="group flex items-center px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                            >
                                 <Hash size={18} className="text-gray-400 mr-3 group-hover:text-violet-500" />
                                 <div className="flex-1">
                                     <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{channel.name}</p>
@@ -45,7 +74,11 @@ const Sidebar = () => {
                     </div>
                      <div className="space-y-1">
                         {MOCK_DMS.map(dm => (
-                             <div key={dm.id} className="flex items-center px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
+                             <div 
+                                key={dm.id} 
+                                onClick={onChatSelect}
+                                className="flex items-center px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                             >
                                 <div className="relative mr-3">
                                     <Avatar size="small" style={{ backgroundColor: '#fde3cf', color: '#f56a00' }}>{dm.name[0]}</Avatar>
                                      <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 ${dm.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
@@ -63,14 +96,18 @@ const Sidebar = () => {
 
              {/* Footer (Profile) */}
              <div className="p-4 border-t border-gray-200 dark:border-gray-800">
-                 <div className="flex items-center p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer transition-colors">
-                      <Avatar className="mr-3" src="https://i.pravatar.cc/150?u=a042581f4e29026704d" />
-                      <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Me</p>
-                          <p className="text-xs text-gray-500">My Status</p>
-                      </div>
-                      <Settings size={18} className="text-gray-400" />
-                 </div>
+                <Dropdown menu={{ items: menuItems }} placement="topLeft" trigger={['click']}>
+                     <div className="flex items-center p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer transition-colors">
+                          <Avatar className="mr-3" src={userInfo?.image || undefined}>{!userInfo?.image && userInfo?.email?.[0]}</Avatar>
+                          <div className="flex-1">
+                              <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 max-w-[120px] truncate">
+                                  {userInfo?.firstName ? `${userInfo.firstName} ${userInfo.lastName}` : userInfo?.email}
+                              </p>
+                              <p className="text-xs text-gray-500">Online</p>
+                          </div>
+                          <Settings size={18} className="text-gray-400" />
+                     </div>
+                </Dropdown>
              </div>
         </div>
     );

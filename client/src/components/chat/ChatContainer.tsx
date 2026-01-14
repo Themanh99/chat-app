@@ -1,5 +1,5 @@
 
-import { Menu, Search, Phone, Video, MoreVertical, Send } from "lucide-react";
+import { Search, Phone, Video, MoreVertical, Send, ArrowLeft } from "lucide-react";
 import { Button, Input } from "antd";
 
 interface ChatContainerProps {
@@ -12,13 +12,15 @@ const ChatContainer = ({ onOpenSidebar }: ChatContainerProps) => {
             {/* Chat Header */}
             <div className="h-16 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm z-10 sticky top-0">
                  <div className="flex items-center">
-                     {/* Mobile Menu Button */}
-                     <Button 
-                        type="text" 
-                        icon={<Menu size={20} />} 
-                        className="md:hidden mr-2" 
-                        onClick={onOpenSidebar}
-                     />
+                     {/* Mobile Back Button (Replaces Menu on mobile when chat is open) */}
+                     {onOpenSidebar && (
+                         <Button 
+                            type="text" 
+                            icon={<ArrowLeft size={20} />} 
+                            className="md:hidden mr-2" 
+                            onClick={onOpenSidebar}
+                         />
+                     )}
                      <div>
                          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100"># General</h3>
                          <p className="text-xs text-gray-500">32 members, 5 online</p>
@@ -71,7 +73,7 @@ const ChatContainer = ({ onOpenSidebar }: ChatContainerProps) => {
                 <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2 border border-transparent focus-within:border-violet-500 transition-colors">
                      <Input 
                         placeholder="Type a message..." 
-                        bordered={false} 
+                        variant="borderless" 
                         className="bg-transparent"
                      />
                      <Button type="primary" shape="circle" icon={<Send size={16} />} className="bg-violet-600" />
