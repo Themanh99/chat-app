@@ -1,8 +1,8 @@
 
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Auth from "./pages/auth";
+import AuthSuccess from "./pages/auth/AuthSuccess";
 import Chat from "./pages/chat";
-import Profile from "./pages/profile";
 import AuthGuard, { PublicRoute } from "./components/layout/AuthGuard";
 
 const App = () => {
@@ -18,7 +18,12 @@ const App = () => {
             </PublicRoute>
           }
         />
+        <Route
+          path="/auth/success"
+          element={<AuthSuccess />}
+        />
 
+        {/* Private Routes (Protected) */}
         {/* Private Routes (Protected) */}
         <Route
           path="/chat"
@@ -28,15 +33,7 @@ const App = () => {
             </AuthGuard>
           }
         />
-        <Route
-          path="/profile"
-          element={
-            <AuthGuard>
-              <Profile />
-            </AuthGuard>
-          }
-        />
-
+        
         {/* Redirects */}
         <Route path="/" element={<Navigate to="/auth" />} />
         <Route path="*" element={<Navigate to="/auth" />} />

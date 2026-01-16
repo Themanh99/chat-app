@@ -11,39 +11,7 @@ import { ErrorCodes } from "../constants/error-codes.js";
 
 // --- Helpers ---
 
-const generateTokens = async (userId: string, email: string) => {
-  const accessToken = jwt.sign({ userId, email }, env.JWT_KEY, {
-    expiresIn: env.ACCESS_TOKEN_AGE,
-  });
-
-  const refreshToken = jwt.sign({ userId, email }, env.JWT_REFRESH_KEY, {
-    expiresIn: env.REFRESH_TOKEN_AGE,
-  });
-
-  // Calculate expiration date for persistence
-  const expiresAt = new Date(Date.now() + env.REFRESH_TOKEN_AGE);
-
-  // Parse persistence: save refresh token
-  await UserToken.create({ userId, token: refreshToken, expiresAt });
-
-  return { accessToken, refreshToken };
-};
-
-const setCookies = (res: Response, accessToken: string, refreshToken: string) => {
-  res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: true, // env.NODE_ENV === "production" in real app, keeping true as per user request context
-    sameSite: "none",
-    maxAge: env.ACCESS_TOKEN_AGE,
-  });
-
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    maxAge: env.REFRESH_TOKEN_AGE,
-  });
-};
+import { generateTokens, setCookies } from "../helpers/AuthHelper.js";
 
 // --- Schemas ---
 
@@ -189,9 +157,104 @@ export const getUserInfo = async (req: any, res: Response, next: NextFunction) =
                 lastName: user.lastName,
                 image: user.image,
                 color: user.color,
+                theme: user.theme,
+                notifications: user.notifications,
+                activeStatus: user.activeStatus,
               },
         });
     } catch(err) {
         next(err);
     }
 }
+
+export const updateProfile = async (req: any, res: Response, next: NextFunction) => {
+    try {
+        const { firstName, lastName, image } = req.body;
+        const user = await User.findById(req.userId);
+        if (!user) {
+             throw new AppError("User not found", HttpCodes.NOT_FOUND, ErrorCodes.RESOURCE_NOT_FOUND);
+        }
+
+        if (firstName !== undefined) user.firstName = firstName;
+        if (lastName !== undefined) user.lastName = lastName;
+        if (image !== undefined) user.image = image;
+        
+        // If updating profile info, mark profileSetup as true
+        if (!user.profileSetup && firstName && lastName) {
+            user.profileSetup = true;
+        }
+
+        await user.save();
+
+        return res.status(HttpCodes.OK).json({
+            message: "Profile updated successfully",
+            user: {
+                id: user._id,
+                email: user.email,
+                profileSetup: user.profileSetup,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                image: user.image,
+                color: user.color,
+                theme: user.theme,
+                notifications: user.notifications,
+                activeStatus: user.activeStatus,
+            }
+        });
+
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const updateSettings = async (req: any, res: Response, next: NextFunction) => {
+    try {
+        const { theme, notifications, activeStatus } = req.body;
+        const user = await User.findById(req.userId);
+        if (!user) {
+             throw new AppError("User not found", HttpCodes.NOT_FOUND, ErrorCodes.RESOURCE_NOT_FOUND);
+        }
+
+        if (theme !== undefined) user.theme = theme;
+        if (notifications !== undefined) user.notifications = notifications;
+        if (activeStatus !== undefined) user.activeStatus = activeStatus;
+
+        await user.save();
+
+         return res.status(HttpCodes.OK).json({
+            message: "Settings updated successfully",
+            settings: {
+                theme: user.theme,
+                notifications: user.notifications,
+                activeStatus: user.activeStatus,
+            }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const updatePassword = async (req: any, res: Response, next: NextFunction) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+         const user = await User.findById(req.userId);
+        if (!user) {
+             throw new AppError("User not found", HttpCodes.NOT_FOUND, ErrorCodes.RESOURCE_NOT_FOUND);
+        }
+
+        const isMatch = await user.comparePassword(currentPassword);
+        if (!isMatch) {
+            throw new AppError("Incorrect current password", HttpCodes.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
+        }
+
+        user.pass = newPassword; // Will be hashed by pre-save hook
+        await user.save();
+
+        return res.status(HttpCodes.OK).json({
+            message: "Password updated successfully"
+        });
+
+    } catch (err) {
+        next(err);
+    }
+};

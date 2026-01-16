@@ -1,6 +1,8 @@
 
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-primary: #8b5cf6; /* Violet-500 */
   --color-secondary: #a78bfa; /* Violet-400 */

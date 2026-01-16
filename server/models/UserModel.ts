@@ -10,6 +10,9 @@ export interface IUser extends Document {
   image?: string;
   color?: number;
   profileSetup?: boolean;
+  theme?: string;
+  notifications?: boolean;
+  activeStatus?: boolean;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -33,6 +36,9 @@ const userSchema = new Schema<IUser>(
     image: { type: String, required: false, default: "" },
     color: { type: Number, required: false, default: 0 },
     profileSetup: { type: Boolean, required: false, default: false },
+    theme: { type: String, required: false, default: "light" },
+    notifications: { type: Boolean, required: false, default: true },
+    activeStatus: { type: Boolean, required: false, default: true },
   },
   { timestamps: true }
 );

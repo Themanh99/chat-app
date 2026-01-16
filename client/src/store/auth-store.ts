@@ -10,6 +10,9 @@ export interface UserInfo {
   image?: string;
   color?: number;
   profileSetup: boolean;
+  theme?: string;
+  notifications?: boolean;
+  activeStatus?: boolean;
 }
 
 interface AuthState {

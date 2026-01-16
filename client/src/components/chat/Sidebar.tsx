@@ -1,10 +1,12 @@
 
-import { Settings, Plus, Hash, LogOut } from "lucide-react";
+import { Settings, Plus, Hash, LogOut, User } from "lucide-react";
 import { Avatar, Button, Tooltip, Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { MOCK_CHANNELS, MOCK_DMS } from "../../lib/mock-data";
 import { useAuth } from "../../hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import ProfileModal from "../profile/ProfileModal";
+import SettingsModal from "../settings/SettingsModal";
 
 interface SidebarProps {
     onChatSelect?: () => void;
@@ -12,13 +14,21 @@ interface SidebarProps {
 
 const Sidebar = ({ onChatSelect }: SidebarProps) => {
     const { logout, userInfo } = useAuth();
-    const navigate = useNavigate();
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const menuItems: MenuProps['items'] = [
         {
             key: 'profile',
             label: 'Profile',
-            onClick: () => navigate('/profile'),
+            icon: <User size={16} />,
+            onClick: () => setIsProfileOpen(true),
+        },
+        {
+            key: 'settings',
+            label: 'Settings',
+            icon: <Settings size={16} />,
+            onClick: () => setIsSettingsOpen(true),
         },
         {
             key: 'logout',
@@ -74,11 +84,11 @@ const Sidebar = ({ onChatSelect }: SidebarProps) => {
                     </div>
                      <div className="space-y-1">
                         {MOCK_DMS.map(dm => (
-                             <div 
+                            <div 
                                 key={dm.id} 
                                 onClick={onChatSelect}
                                 className="flex items-center px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-                             >
+                            >
                                 <div className="relative mr-3">
                                     <Avatar size="small" style={{ backgroundColor: '#fde3cf', color: '#f56a00' }}>{dm.name[0]}</Avatar>
                                      <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 ${dm.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
@@ -105,10 +115,13 @@ const Sidebar = ({ onChatSelect }: SidebarProps) => {
                               </p>
                               <p className="text-xs text-gray-500">Online</p>
                           </div>
-                          <Settings size={18} className="text-gray-400" />
                      </div>
                 </Dropdown>
              </div>
+
+             {/* Modals */}
+             <ProfileModal open={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
+             <SettingsModal open={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
         </div>
     );
 };

@@ -31,7 +31,13 @@ const envSchema = z.object({
   DB_NAME: z.string().min(1),
   DB_USER: z.string().optional(),
   DB_PASS: z.string().optional(),
-  DB_AUTH_DB: z.string().default("admin"),
+  DB_AUTH_DB: z.string().default("admin"), // Keep comma
+
+  // OneLogin
+  ONELOGIN_CLIENT_ID: z.string().min(1),
+  ONELOGIN_CLIENT_SECRET: z.string().min(1),
+  ONELOGIN_ISSUER_URL: z.string().url(),
+  ONELOGIN_REDIRECT_URI: z.string().url(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

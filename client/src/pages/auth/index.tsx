@@ -7,6 +7,8 @@ import { z } from "zod";
 import { useAuth } from "../../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import BackgroundImage from "../../assets/login_background_pattern.png"; // Generated image path
+import { apiClient } from "../../lib/api-client";
+import { message } from "antd";
 
 
 
@@ -31,6 +33,54 @@ type LoginFormData = z.infer<typeof loginSchema>;
 type SignupFormData = z.infer<typeof signupSchema>;
 
 // --- Components ---
+
+const SSOSection = () => {
+    const [companyCode, setCompanyCode] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const handleSSO = async () => {
+        if(!companyCode.trim()) {
+            message.error("Please enter Company Code");
+            return;
+        }
+        setLoading(true);
+        try {
+            const res = await apiClient.get(`/api/auth/sso?companyCode=${encodeURIComponent(companyCode)}`);
+            if(res.data.redirectUrl) {
+                window.location.href = res.data.redirectUrl;
+            }
+        } catch(err) {
+            console.error(err);
+            message.error("Failed to initiate SSO");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    return (
+        <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+             <div className="text-center text-gray-500 dark:text-gray-400 mb-4 text-sm font-medium">— OR —</div>
+             <div className="flex flex-col gap-3">
+                 <Input 
+                    placeholder="Company Code (SSO)" 
+                    value={companyCode} 
+                    onChange={(e) => setCompanyCode(e.target.value)}
+                    className="rounded-xl"
+                    size="large"
+                 />
+                 <Button 
+                    onClick={handleSSO} 
+                    loading={loading}
+                    block 
+                    size="large"
+                    className="rounded-xl font-semibold h-12"
+                 >
+                    Login with SSO
+                 </Button>
+             </div>
+        </div>
+    )
+}
 
 const LoginForm = () => {
   const { login } = useAuth();
@@ -61,7 +111,8 @@ const LoginForm = () => {
   };
 
   return (
-    <Form layout="vertical" onFinish={handleSubmit(onSubmit)} className="mt-4">
+    <div className="mt-4">
+    <Form layout="vertical" onFinish={handleSubmit(onSubmit)}>
       <Form.Item
         label={<span className="font-medium text-gray-700 dark:text-gray-300">Email</span>}
         validateStatus={errors.email ? "error" : ""}
@@ -101,6 +152,8 @@ const LoginForm = () => {
         Login
       </Button>
     </Form>
+    <SSOSection />
+    </div>
   );
 };
 
