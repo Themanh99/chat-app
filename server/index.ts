@@ -12,9 +12,11 @@ import fs from "fs";
 
 import { env } from "./config/env.js";
 import authRoutes from "./routes/AuthRoutes.js";
+import channelRoutes from "./routes/ChannelRoutes.js";
 import { errorHandler } from "./middlewares/ErrorHandler.js";
 
 import { connectDB } from "./helpers/common-helper.js";
+import { setupSocket } from "./socket.js";
 
 // ... (removed buildMongoUri and connectDB definitions)
 
@@ -55,7 +57,12 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok", env: env.NODE_ENV });
 });
 
+import messageRoutes from "./routes/MessageRoutes.js";
+
 app.use("/api/auth", authRoutes);
+app.use("/api/channels", channelRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/uploads", express.static("uploads")); // Serve uploaded files static
 
 // Static frontend (Verify relative path)
 const clientDist = path.resolve(process.cwd(), "dist");
@@ -74,12 +81,15 @@ if (fs.existsSync(clientDist)) {
 app.use(errorHandler);
 
 // Start server
+// Start server
 const server = app.listen(env.PORT, async () => {
   console.log(
     `🚀 Server listening on port ${env.PORT} (env=${env.NODE_ENV})`
   );
   await connectDB();
 });
+
+setupSocket(server);
 
 // Graceful shutdown
 function shutdown(signal: string) {

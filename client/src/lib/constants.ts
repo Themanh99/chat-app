@@ -1,4 +1,5 @@
 
+export const HOST = import.meta.env.VITE_SERVER_URL || "http://localhost:8747";
 export const AUTH_ROUTES = {
   SIGN_UP: "/api/auth/signup",
   LOGIN: "/api/auth/login",

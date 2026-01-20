@@ -15,11 +15,7 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     } else {
         // If authenticated and on auth page, redirect to chat
         if (location.pathname === "/auth") {
-             if (userInfo.profileSetup) {
-                 navigate("/chat");
-             } else {
-                 navigate("/profile");
-             }
+             navigate("/chat");
         }
     }
   }, [userInfo, navigate, location]);
@@ -39,11 +35,8 @@ export const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         if (userInfo) {
-             if (userInfo.profileSetup) {
-                 navigate("/chat");
-             } else {
-                 navigate("/profile");
-             }
+             // Always redirect to /chat since profile setup can be done later
+             navigate("/chat");
         }
     }, [userInfo, navigate]);
 

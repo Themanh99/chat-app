@@ -258,3 +258,34 @@ export const updatePassword = async (req: any, res: Response, next: NextFunction
         next(err);
     }
 };
+
+export const searchUsers = async (req: any, res: Response, next: NextFunction) => {
+    try {
+        const { searchTerm } = req.body;
+        
+        if (!searchTerm) {
+             throw new AppError("Search term is required", HttpCodes.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR);
+        }
+
+        // Remove special regex characters to prevent errors
+        const sanitizedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(sanitizedSearchTerm, "i");
+
+        const users = await User.find({
+            $and: [
+                { _id: { $ne: req.userId } }, // Exclude self
+                {
+                    $or: [
+                        { firstName: regex },
+                        { lastName: regex },
+                        { email: regex }
+                    ]
+                }
+            ]
+        }).select("firstName lastName email image color");
+
+        return res.status(HttpCodes.OK).json({ users });
+    } catch (err) {
+        next(err);
+    }
+};

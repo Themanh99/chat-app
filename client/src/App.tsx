@@ -4,6 +4,7 @@ import Auth from "./pages/auth";
 import AuthSuccess from "./pages/auth/AuthSuccess";
 import Chat from "./pages/chat";
 import AuthGuard, { PublicRoute } from "./components/layout/AuthGuard";
+import { SocketProvider } from "./context/SocketContext";
 
 const App = () => {
   return (
@@ -29,7 +30,9 @@ const App = () => {
           path="/chat"
           element={
             <AuthGuard>
-              <Chat />
+              <SocketProvider>
+                <Chat />
+              </SocketProvider>
             </AuthGuard>
           }
         />

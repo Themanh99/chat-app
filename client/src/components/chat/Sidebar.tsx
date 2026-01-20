@@ -2,11 +2,13 @@
 import { Settings, Plus, Hash, LogOut, User } from "lucide-react";
 import { Avatar, Button, Tooltip, Dropdown } from "antd";
 import type { MenuProps } from "antd";
-import { MOCK_CHANNELS, MOCK_DMS } from "../../lib/mock-data";
 import { useAuth } from "../../hooks/useAuth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ProfileModal from "../profile/ProfileModal";
 import SettingsModal from "../settings/SettingsModal";
+import NewChatModal from "./NewChatModal";
+import { useChatStore } from "../../store/chat-store";
+import { apiClient } from "../../lib/api-client";
 
 interface SidebarProps {
     onChatSelect?: () => void;
@@ -14,8 +16,46 @@ interface SidebarProps {
 
 const Sidebar = ({ onChatSelect }: SidebarProps) => {
     const { logout, userInfo } = useAuth();
+    const { 
+        channels, 
+        setChannels, 
+        setSelectedChatType, 
+        setSelectedChatData, 
+        selectedChatData
+    } = useChatStore();
+
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+
+    useEffect(() => {
+        const fetchChannels = async () => {
+            try {
+                const response = await apiClient.get("/api/channels/get-user-channels");
+                setChannels(response.data.channels);
+            } catch (error) {
+                console.error("Error fetching channels:", error);
+                // message.error("Failed to load chats");
+            }
+        };
+        
+        if (userInfo) {
+            fetchChannels();
+        }
+    }, [userInfo, setChannels]);
+
+    const handleChatClick = (channel: any) => {
+        setSelectedChatType(channel.type);
+        setSelectedChatData(channel);
+        // Clear previous messages to trigger fresh load
+        setSelectedChatMessages([]);
+        if (onChatSelect) onChatSelect();
+    };
+    
+    const getDmPartner = (channel: any) => {
+        if (!userInfo || !channel.members) return null;
+        return channel.members.find((m: any) => m._id !== userInfo.id) || channel.members[0]; // Fallback to self (Saved messages?) or first
+    };
 
     const menuItems: MenuProps['items'] = [
         {
@@ -39,6 +79,10 @@ const Sidebar = ({ onChatSelect }: SidebarProps) => {
         },
     ];
 
+    // Filter channels
+    const groupChannels = channels.filter(c => c.type === 'group');
+    const dmChannels = channels.filter(c => c.type === 'dm');
+
     return (
         <div className="w-full md:w-[280px] lg:w-[320px] h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300">
             {/* Header */}
@@ -46,8 +90,13 @@ const Sidebar = ({ onChatSelect }: SidebarProps) => {
                 <h1 className="text-xl font-bold bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
                     ChatApp
                 </h1>
-                <Tooltip title="Create Channel">
-                     <Button type="text" shape="circle" icon={<Plus size={20} className="text-gray-500" />} />
+                <Tooltip title="New Chat">
+                     <Button 
+                        type="text" 
+                        shape="circle" 
+                        icon={<Plus size={20} className="text-gray-500" />} 
+                        onClick={() => setIsNewChatOpen(true)}
+                    />
                 </Tooltip>
             </div>
 
@@ -55,50 +104,64 @@ const Sidebar = ({ onChatSelect }: SidebarProps) => {
             <div className="flex-1 overflow-y-auto p-3 space-y-6 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
                 
                 {/* Groups */}
-                <div>
-                    <div className="flex items-center justify-between px-2 mb-2">
-                         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Groups</span>
-                         <Plus size={14} className="text-gray-400 cursor-pointer hover:text-violet-500" />
-                    </div>
-                    <div className="space-y-1">
-                        {MOCK_CHANNELS.map(channel => (
-                            <div 
-                                key={channel.id} 
-                                onClick={onChatSelect}
-                                className="group flex items-center px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-                            >
-                                <Hash size={18} className="text-gray-400 mr-3 group-hover:text-violet-500" />
-                                <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{channel.name}</p>
+                {groupChannels.length > 0 && (
+                    <div>
+                        <div className="flex items-center justify-between px-2 mb-2">
+                             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Groups</span>
+                             <Plus size={14} className="text-gray-400 cursor-pointer hover:text-violet-500" />
+                        </div>
+                        <div className="space-y-1">
+                            {groupChannels.map(channel => (
+                                <div 
+                                    key={channel._id} 
+                                    onClick={() => handleChatClick(channel)}
+                                    className={`group flex items-center px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors ${selectedChatData?._id === channel._id ? 'bg-gray-200 dark:bg-gray-800' : ''}`}
+                                >
+                                    <Hash size={18} className="text-gray-400 mr-3 group-hover:text-violet-500" />
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{channel.name}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Direct Messages */}
                 <div>
                      <div className="flex items-center justify-between px-2 mb-2">
                          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Direct Messages</span>
-                         <Plus size={14} className="text-gray-400 cursor-pointer hover:text-violet-500" />
+                         <Plus 
+                            size={14} 
+                            className="text-gray-400 cursor-pointer hover:text-violet-500" 
+                            onClick={() => setIsNewChatOpen(true)}
+                        />
                     </div>
                      <div className="space-y-1">
-                        {MOCK_DMS.map(dm => (
-                            <div 
-                                key={dm.id} 
-                                onClick={onChatSelect}
-                                className="flex items-center px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-                            >
-                                <div className="relative mr-3">
-                                    <Avatar size="small" style={{ backgroundColor: '#fde3cf', color: '#f56a00' }}>{dm.name[0]}</Avatar>
-                                     <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 ${dm.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                                </div>
-                                <div>
-                                     <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{dm.name}</p>
-                                     <p className="text-xs text-gray-400 truncate w-32">{dm.lastMessage}</p>
-                                </div>
-                             </div>
-                        ))}
+                        {dmChannels.map(channel => {
+                            const partner = getDmPartner(channel);
+                            if (!partner) return null;
+                            return (
+                                <div 
+                                    key={channel._id} 
+                                    onClick={() => handleChatClick(channel)}
+                                    className={`flex items-center px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors ${selectedChatData?._id === channel._id ? 'bg-gray-200 dark:bg-gray-800' : ''}`}
+                                >
+                                    <div className="relative mr-3">
+                                        <Avatar size="small" src={partner.image} style={{ backgroundColor: partner.color || '#fde3cf', color: '#f56a00' }}>
+                                            {partner.firstName ? partner.firstName[0] : partner.email[0]}
+                                        </Avatar>
+                                         <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 ${partner.activeStatus ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                                    </div>
+                                    <div>
+                                         <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                            {partner.firstName ? `${partner.firstName} ${partner.lastName}` : partner.email}
+                                         </p>
+                                         {/* <p className="text-xs text-gray-400 truncate w-32">{dm.lastMessage}</p> */}
+                                    </div>
+                                 </div>
+                            );
+                        })}
                      </div>
                 </div>
 
@@ -122,6 +185,7 @@ const Sidebar = ({ onChatSelect }: SidebarProps) => {
              {/* Modals */}
              <ProfileModal open={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
              <SettingsModal open={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+             <NewChatModal open={isNewChatOpen} onClose={() => setIsNewChatOpen(false)} />
         </div>
     );
 };

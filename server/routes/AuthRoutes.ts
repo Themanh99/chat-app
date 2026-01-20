@@ -1,6 +1,6 @@
 
 import { Router } from "express";
-import { signUp, login, logout, refreshToken, getUserInfo, updateProfile, updateSettings, updatePassword } from "../controllers/AuthController.js";
+import { signUp, login, logout, refreshToken, getUserInfo, updateProfile, updateSettings, updatePassword, searchUsers } from "../controllers/AuthController.js";
 import { initiateSSO, handleSSOCallback } from "../controllers/SSOController.js";
 import { verifyToken } from "../middlewares/AuthMiddleware.js";
 
@@ -16,5 +16,7 @@ authRoutes.get("/me", verifyToken, getUserInfo);
 authRoutes.put("/update-profile", verifyToken, updateProfile);
 authRoutes.put("/update-settings", verifyToken, updateSettings);
 authRoutes.put("/update-password", verifyToken, updatePassword);
+authRoutes.post("/search-users", verifyToken, searchUsers);
+
 
 export default authRoutes;
